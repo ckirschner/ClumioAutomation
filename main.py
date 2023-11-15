@@ -4,6 +4,9 @@ from selenium import Keys
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import time
 
+import creds
+
+
 def login_and_select_microsoft_365(url, username, password):
     # Initialize WebDriver for Chrome
     driver = webdriver.Chrome()
@@ -29,7 +32,7 @@ def login_and_select_microsoft_365(url, username, password):
         # Enter password and click 'Log In'
         password_field = driver.find_element(By.CSS_SELECTOR, "#clumio-password")
         password_field.send_keys(password)
-        login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")  
+        login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
         login_button.click()
 
         # Wait for the page to load after login
@@ -123,4 +126,5 @@ def login_and_select_microsoft_365(url, username, password):
         pass
 
 # Use the function
-login_and_select_microsoft_365("https://portal.clumio.com/", "admin@M365x72807442.onmicrosoft.com", "M365x72807442.onmicrosoft.com")
+# log into clumio using user and pass stored in a creds module that doesn't sync to git.
+login_and_select_microsoft_365("https://portal.clumio.com/", creds.clumio_user, creds.clumio_pass)
