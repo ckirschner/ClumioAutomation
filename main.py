@@ -1,117 +1,84 @@
 from selenium import webdriver
-from selenium import By
-from selenium import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
 import time
+import csv
 
 import creds
 
+driver = webdriver.Chrome()
+driver.implicitly_wait(15)
 
-def login_and_select_microsoft_365(url, username, password):
+def login_to_clumio(url, admin_username, admin_password):
     # Initialize WebDriver for Chrome
     driver = webdriver.Chrome()
+    driver.implicitly_wait(15)
+    restore_user = "Adele Vance"
 
     try:
         # Navigate to the website
         driver.get(url)
 
-        # Wait for the login elements to load
-        time.sleep(2)
+        driver.find_element(By.CSS_SELECTOR, "#clumio-email").send_keys(admin_username)
 
-        # Enter username in the field with label 'clumio-email' to enter email
-        username_field = driver.find_element(By.CSS_SELECTOR, "#clumio-email")
-        username_field.send_keys(username)
-
-        # Find and click the 'Next' button to submit username
-        next_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        next_button.click()
-
-        # Wait for password field
-        time.sleep(2)
+        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
 
         # Enter password and click 'Log In'
         password_field = driver.find_element(By.CSS_SELECTOR, "#clumio-password")
-        password_field.send_keys(password)
+        password_field.send_keys(admin_password)
         login_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
         login_button.click()
 
         # Wait for the page to load after login
         time.sleep(10)
 
-        # Find and click the 'Microsoft 365' button to open M365 backups
-        ms365_button = driver.find_element(By.CSS_SELECTOR, "a[title='Microsoft 365']")
-        ms365_button.click()
+    except NoSuchElementException as e:
+        print("Element not found:", e)
+    except ElementClickInterceptedException as e:
+        print("Element not clickable:", e)
+    finally:
+        # Close the browser (comment out if you want to keep it open)
+        # driver.quit()
+        pass
 
-        # Wait for the next element to load
-        time.sleep(5)
+def restore_exchange_mailbox(current_user, restore_location, date):
 
-        # Find and click the button for the organization backup
-        onmicrosoft_button = driver.find_element(By.CSS_SELECTOR, "a[title='M365x72807442.onmicrosoft.com']")
-        onmicrosoft_button.click()
+    calendar_selection = f"//div[@id='month-calendar-{date}']//button[@class='cl-month-dynamic-calendar__body__date']"
 
-        # Wait for the next element to load
-        time.sleep(5)
+    try:
 
-        # Click on the Exchange Tab
-        exchange_tab = driver.find_element(By.XPATH, "//div[contains(text(),'Exchange')]")
-        exchange_tab.click()
+        # Select User mailbox
+        driver.find_element(By.LINK_TEXT, current_user).click()
 
-        time.sleep(5)
+        # Select date to restore 
+        driver.find_element(By.XPATH, calendar_selection).click()
 
-        # Click first username
-        user = driver.find_element(By.LINK_TEXT, "Adele Vance")
-        user.click()
-
-        time.sleep(8)
-
-        # Click on the date to restore from
-        restore_date = driver.find_element(By.XPATH, "//div[@id='month-calendar-14-10-2023']//button[@class='cl-month-dynamic-calendar__body__date']")
-        restore_date.click()
-
-        time.sleep(5)
-
-        # Click on the restore exchange button (Needs to be reworked to find must recent exchange backup)
-        restore_exchange = driver.find_element(By.XPATH, "(//button[@id='restore-btn'])[2]")
-        restore_exchange.click()
-
-        time.sleep(5)
+        driver.find_element(By.XPATH, "(//button[@id='restore-btn'])[1]").click()
 
         # Enter the restore mailbox location
-        restore_mailbox = driver.find_element(By.XPATH , "//input[@id='mailboxName']")
+        restore_mailbox = driver.find_element(By.XPATH, "//input[@id='mailboxName']")
         restore_mailbox.click()
-        time.sleep(1)
-        restore_mailbox.send_keys(Keys.CONTROL, 'a')
-        time.sleep(1)
-        restore_mailbox.send_keys(Keys.BACKSPACE)
-        time.sleep(2)
-        restore_mailbox.send_keys("MOD Administrator")
-        time.sleep(3)
-        restore_mailbox.send_keys(Keys.ENTER)
 
-        time.sleep(2)
+        time.sleep(5)
+        restore_mailbox.send_keys(Keys.CONTROL, 'a', Keys.BACKSPACE, restore_location, Keys.ENTER)
 
-        # Enter the restore folder location
+        # Enter the restore folder location name it with the current user being restored
         username_field = driver.find_element(By.XPATH, "//input[@id='folderName']")
         restore_mailbox.click()
-        time.sleep(1)
-        username_field.send_keys("AdeleV Restore1")
-
-        time.sleep(2)
+        username_field.send_keys(current_user, " - Restored")
 
         # Disable Contact Restore
         disable_contact = driver.find_element(By.XPATH, "//label[@for='restore-contacts']")
         disable_contact.click()
 
-        time.sleep(2)
-
         # Disable Calendar Restore
         disable_calendar = driver.find_element(By.XPATH, "//label[@for='restore-calendars']")
         disable_calendar.click()
 
-        time.sleep(5)
-
         # Start Restore
-        restore_exchange = driver.find_element(By.XPATH, "//button[@class='clumio-button-v1 primary default size-regular']")
+        restore_exchange = driver.find_element(By.XPATH,
+                                               "//button[@class='clumio-button-v1 primary default size-regular']")
         restore_exchange.click()
 
         time.sleep(25)
@@ -125,6 +92,22 @@ def login_and_select_microsoft_365(url, username, password):
         # driver.quit()
         pass
 
-# Use the function
+
 # log into clumio using user and pass stored in a creds module that doesn't sync to git.
-login_and_select_microsoft_365("https://portal.clumio.com/", creds.clumio_user, creds.clumio_pass)
+# using this method with non secure test environment.
+login_to_clumio("https://portal.clumio.com/", creds.clumio_user, creds.clumio_pass)
+
+user_list = input("Enter path to user list CSV: ")
+restore_mailbox_location = input("Enter the name of the shared mailbox to restore items to: ")
+restore_date = input("Enter the date to restore in format DD-MM-YYYY: ")
+users = []
+
+with open(user_list, 'r') as csvfile:
+    csv_reader = csv.DictReader(user_list)
+
+    for row in csv_reader:
+        users.append(row)
+
+
+for user_to_restore in users:
+    restore_exchange_mailbox(user_to_restore, restore_mailbox_location, restore_date)
