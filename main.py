@@ -54,6 +54,8 @@ def restore_exchange_mailbox(current_user, restore_location, date):
         # Select date to restore 
         driver.find_element(By.XPATH, calendar_selection).click()
 
+        # Need to verify which button the restore is at. This is identified on the page just as a number
+        # which could iterate higher if exchange and teams are available as restore.
         driver.find_element(By.XPATH, "(//button[@id='restore-btn'])[1]").click()
 
         # Enter the restore mailbox location
